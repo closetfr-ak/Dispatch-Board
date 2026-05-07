@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Dispatch Dashboard</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    padding:16px;
+    background:#f2f2f7;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+    color:#111;
+}
+
+h1{
+    font-size:28px;
+    margin-bottom:18px;
+}
+
+.card{
+    background:#fff;
+    border-radius:18px;
+    padding:16px;
+    margin-bottom:18px;
+    box-shadow:0 4px 12px rgba(0,0,0,.06);
+}
+
+label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:6px;
+    color:#555;
+}
+
+input, textarea, select{
+    width:100%;
+    padding:12px;
+    border-radius:12px;
+    border:1px solid #ddd;
+    margin-bottom:14px;
+    font-size:16px;
+    background:#fafafa;
+}
+
+button{
+    width:100%;
+    border:none;
+    border-radius:12px;
+    padding:14px;
+    background:#111;
+    color:#fff;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:8px;
+}
+
+.secondary{
+    background:#e8e8ed;
+    color:#111;
+}
+
+.route-link{
+    display:block;
+    margin-top:10px;
+    font-size:14px;
+    word-break:break-word;
+}
+
+.load-card{
+    border:1px solid #eee;
+    border-radius:14px;
+    padding:12px;
+    margin-top:12px;
+    background:#fafafa;
+}
+
+.load-title{
+    font-weight:700;
+    margin-bottom:8px;
+}
+
+.small{
+    font-size:14px;
+    color:#555;
+    line-height:1.5;
+}
+
+.copy-box{
+    white-space:pre-line;
+    background:#fafafa;
+    border:1px solid #e5e5e5;
+    border-radius:12px;
+    padding:12px;
+    margin-top:14px;
+    line-height:1.5;
+}
+
+.actions{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+}
+
+.actions button{
+    flex:1;
+    margin-top:0;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Mini Dispatch Dashboard</h1>
+
+<div class="card">
+
+<label>Driver Name</label>
+<input id="driver" placeholder="John Doe">
+
+<label>Pickup Address</label>
+<input id="pickup" placeholder="123 Main St, Atlanta, GA">
+
+<label>Pickup Date/Time</label>
+<input id="pickupTime" placeholder="5/6/2026 8:00 AM">
+
+<label>Delivery Address</label>
+<input id="delivery" placeholder="456 Market St, Dallas, TX">
+
+<label>Delivery Date/Time</label>
+<input id="deliveryTime" placeholder="5/7/2026 2:00 PM">
+
+<label>Pay ($)</label>
+<input id="pay" type="number" placeholder="2500">
+
+<label>Equipment</label>
+<select id="equipment">
+<option>Dry Van</option>
+<option>Reefer</option>
+<option>Flatbed</option>
+<option>Hotshot</option>
+<option>Power Only</option>
+</select>
+
+<button onclick="generateLoad()">Generate Dispatch</button>
+
+<a id="routeLink" class="route-link" target="_blank"></a>
+
+<div class="copy-box" id="dispatchBox">
+Dispatch summary will appear here.
+</div>
+
+<div class="actions">
+<button class="secondary" onclick="copyDispatch()">Copy</button>
+<button class="secondary" onclick="saveLoad()">Save Load</button>
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>Saved Loads</h2>
+
+<div id="savedLoads"></div>
+
+</div>
+
+<script>
+
+let currentDispatch = "";
+
+function generateMapsLink(origin, destination){
+
+    const base =
+    "https://www.google.com/maps/dir/?api=1";
+
+    return `${base}&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+}
+
+function generateLoad(){
+
+    const driver =
+    document.getElementById("driver").value || "N/A";
+
+    const pickup =
+    document.getElementById("pickup").value;
+
+    const pickupTime =
+    document.getElementById("pickupTime").value || "N/A";
+
+    const delivery =
+    document.getElementById("delivery").value;
+
+    const deliveryTime =
+    document.getElementById("deliveryTime").value || "N/A";
+
+    const pay =
+    document.getElementById("pay").value || "0";
+
+    const equipment =
+    document.getElementById("equipment").value;
+
+    if(!pickup || !delivery){
+        alert("Pickup and delivery are required.");
+        return;
+    }
+
+    const route =
+    generateMapsLink(pickup, delivery);
+
+    document.getElementById("routeLink").href = route;
+    document.getElementById("routeLink").innerText = "Open Route in Google Maps";
+
+    currentDispatch =
+`DRIVER
+${driver}
+
+PICKUP
+${pickup}
+${pickupTime}
+
+DELIVERY
+${delivery}
+${deliveryTime}
+
+PAY
+$${pay}
+
+EQUIPMENT
+${equipment}
+
+ROUTE
+${route}`;
+
+    document.getElementById("dispatchBox").innerText =
+    currentDispatch;
+}
+
+async function copyDispatch(){
+
+    if(!currentDispatch){
+        alert("Generate dispatch first.");
+        return;
+    }
+
+    try{
+
+        await navigator.clipboard.writeText(currentDispatch);
+        alert("Dispatch copied.");
+
+    } catch(err){
+
+        const textarea =
+        document.createElement("textarea");
+
+        textarea.value = currentDispatch;
+
+        document.body.appendChild(textarea);
+
+        textarea.select();
+
+        document.execCommand("copy");
+
+        document.body.removeChild(textarea);
+
+        alert("Dispatch copied.");
+    }
+}
+
+function saveLoad(){
+
+    if(!currentDispatch){
+        alert("Generate dispatch first.");
+        return;
+    }
+
+    const loads =
+    JSON.parse(localStorage.getItem("dispatchLoads")) || [];
+
+    const load = {
+        driver:
+        document.getElementById("driver").value,
+
+        pickup:
+        document.getElementById("pickup").value,
+
+        delivery:
+        document.getElementById("delivery").value,
+
+        pay:
+        document.getElementById("pay").value,
+
+        equipment:
+        document.getElementById("equipment").value,
+
+        dispatch: currentDispatch,
+
+        route:
+        document.getElementById("routeLink").href
+    };
+
+    loads.unshift(load);
+
+    localStorage.setItem(
+        "dispatchLoads",
+        JSON.stringify(loads)
+    );
+
+    renderLoads();
+
+    alert("Load saved.");
+}
+
+function renderLoads(){
+
+    const container =
+    document.getElementById("savedLoads");
+
+    const loads =
+    JSON.parse(localStorage.getItem("dispatchLoads")) || [];
+
+    if(loads.length === 0){
+
+        container.innerHTML =
+        `<div class="small">No saved loads yet.</div>`;
+
+        return;
+    }
+
+    container.innerHTML = "";
+
+    loads.forEach((load, index) => {
+
+        const div =
+        document.createElement("div");
+
+        div.className = "load-card";
+
+        div.innerHTML = `
+        <div class="load-title">
+        ${load.driver || "Driver"}
+        </div>
+
+        <div class="small">
+        <strong>PU:</strong> ${load.pickup}<br>
+        <strong>DEL:</strong> ${load.delivery}<br>
+        <strong>Pay:</strong> $${load.pay}<br>
+        <strong>Equipment:</strong> ${load.equipment}
+        </div>
+
+        <div class="actions">
+            <button onclick='openRoute(${index})'>
+            Route
+            </button>
+
+            <button class="secondary" onclick='copySaved(${index})'>
+            Copy
+            </button>
+        </div>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+function openRoute(index){
+
+    const loads =
+    JSON.parse(localStorage.getItem("dispatchLoads")) || [];
+
+    window.open(loads[index].route, "_blank");
+}
+
+async function copySaved(index){
+
+    const loads =
+    JSON.parse(localStorage.getItem("dispatchLoads")) || [];
+
+    const text =
+    loads[index].dispatch;
+
+    try{
+
+        await navigator.clipboard.writeText(text);
+
+        alert("Copied.");
+
+    } catch(err){
+
+        const textarea =
+        document.createElement("textarea");
+
+        textarea.value = text;
+
+        document.body.appendChild(textarea);
+
+        textarea.select();
+
+        document.execCommand("copy");
+
+        document.body.removeChild(textarea);
+
+        alert("Copied.");
+    }
+}
+
+renderLoads();
+
+</script>
+
+</body>
+</html>
